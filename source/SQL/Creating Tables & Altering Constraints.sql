@@ -24,81 +24,27 @@ The Database should contain the following tables:
 7) Shipping Mode
 
 */
--- CREATE A DATABASE FOR DATACO SUPPLY CHAIN MANAGEMENT SYSTEM
-CREATE DATABASE dataco
-DEFAULT CHARACTER SET utf8mb4;
-
--- TO ENSURE THE DATABASE WAS CREATED
-SHOW DATABASES;
-
--- TO MAKE IT THE ACTIVE DATABASE
-USE dataco_db;
-
-------------------------------------------------------------------------------------------------
-
--- A) CREATING TABLES
-
--- CREATING THE TABLE
-/* 
-The data is in a CSV file and after observing the data, First, I created a table called 
-raw_data to store the data in the CSV file to have an overview of the raw data.
-*/
-
--- to make the dataco_db database the active database 
-USE dataco_db;
-
--- INSERTING DATA INTO THE CREATED TABLE
-/* 
-Currently, the dataset sits in my local device so I could either use the 
-- Table Data Import WIzard
-- Use a query to load the data from your local device
-
-The Table Data Import Wizard was used because I was having diffulties scaling through this error
-
-"ERROR: 3948: Loading local data is disabled; this must be enabled on both the client and server sides"
-
-but this is the code to load using MySQL Command Prompt
-
-Note: Make sure to insert the desired CSV table under this path to enable this code to run under MySQL Coomand Line Client (Run as admin)
-'/ProgramData/MySQL/MySQL Server 8.0/Data/dataco_db'
-*/
-
-SHOW GLOBAL VARIABLES LIKE 'local_infile';
-SHOW VARIABLES LIKE 'secure_file_priv';
-
-LOAD DATA LOCAL INFILE 'C/ProgramData/MySQL/MySQL Server 8.0/Data/dataco_db/DataCo Supply Chain Dataset.csv' -- table path
-INTO TABLE raw_data
-FIELDS TERMINATED BY ',' -- csv file
-ENCLOSED BY '"' -- for the strings
-LINES TERMINATED BY '\n'
-IGNORE 1 ROWS; -- ignore the headers
-
-
-
--- to check the table for the loaded data
-SELECT *
-FROM raw_data
-LIMIT 5;
+USE dataco;
 
 --- 1) CREATE ORDERS TABLE
+DROP TABLE IF EXISTS orders;
 
-DROP TABLE IF EXISTS Orders;
-
-CREATE TABLE Orders(
-	OrderId VARCHAR(255),
-    OrderCustomerId VARCHAR(255),
-    OrderDate DATE,
-    OrderStatus VARCHAR(255),
-	OrderProfitPerOrder DECIMAL(10, 2),
-    MarketLocation VARCHAR(255),
-    OrderCity VARCHAR(255),
-    OrderState VARCHAR(255),
-    OrderCountry VARCHAR(255),
-    OrderRegion VARCHAR(255),
-    ShippingDate DATE,
-    DepartmentId INTEGER,
-    PRIMARY KEY(OrderId),
-    FOREIGN KEY(DepartmentId) REFERENCES Department(DepartmentId)
+CREATE TABLE IF NOT EXISTS orders(
+	order_id VARCHAR(255),
+    order_customer_id VARCHAR(255),
+    order_date DATE,
+    order_status VARCHAR(255),
+	order_profit_per_order DECIMAL(10, 2),
+    market VARCHAR(255),
+    order_city VARCHAR(255),
+    order_state VARCHAR(255),
+    order_country VARCHAR(255),
+    order_region VARCHAR(255),
+    shipping_date DATE,
+    department_id INTEGER,
+    PRIMARY KEY(order_id),
+    FOREIGN KEY(department_id) REFERENCES department(department_id)
+    FOREIGN KEY(order_customer_id) REFERENCES customer(customer_id)
     );
     
 SHOW VARIABLES WHERE Variable_Name LIKE "%dir" ;
