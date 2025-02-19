@@ -42,6 +42,7 @@ Order Profit Per Order,:  Order Profit Per Order
 Order Region,":  Region of the world where the order is delivered :  Southeast Asia ,South Asia ,Oceania ,Eastern Asia, West Asia , West of USA , US Center , West Africa, Central Africa ,North Africa ,Western Europe ,Northern , Caribbean , South America ,East Africa ,Southern Europe , East of USA ,Canada ,Southern Africa , Central Asia ,  Europe , Central America, Eastern Europe , South of  USA "
 Order State,:  State of the region where the order is delivered
 Order Status,":  Order Status : COMPLETE , PENDING , CLOSED , PENDING_PAYMENT ,CANCELED , PROCESSING ,SUSPECTED_FRAUD ,ON_HOLD ,PAYMENT_REVIEW"
+Order Zipcode,: Zipcode where order is deliver to
 Product Card Id,:  Product code
 Product Category Id,:  Product category code
 Product Description,:  Product Description

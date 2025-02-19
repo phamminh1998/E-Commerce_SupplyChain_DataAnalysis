@@ -1,12 +1,6 @@
 # E-Commerce_SupplyChain_DataAnalysis
 
-<a target="_blank" href="https://cookiecutter-data-science.drivendata.org/">
-    <img src="https://img.shields.io/badge/CCDS-Project%20template-328F97?logo=cookiecutter" />
-</a>
-
 # DATACO-SUPPLY-CHAIN-ANALYSIS
-
----
 
 
 
@@ -69,13 +63,15 @@ List the tools used in the project.
 - Python (Pandas, Matplotlib) – Exploratory Data Analysis
 - Power BI (DAX, Tooltips, Bookmarking) – Dashboard and visualization
 
+---
+
 ## 🚀 Steps in the Project  
 
 This project follows a structured end-to-end data analysis workflow:  
 
 1. **Data Cleaning & Transformation**  
-   - Imported raw data into MySQL  
-   - Cleaned missing values and handled data inconsistencies using SQL & Python  
+   - Imported raw data into MySQL, Cleaned missing values, trim whitespace, normalize geographical data, handled data inconsistencies using SQL. SQL script: [1_clean_data](source/1_clean_data.sql)
+   - Create a similar Python script to import, clean and handle data inconsistency: [1_clean_data.py](1_clean_data.py)
 
 2. **Data Modeling & Schema Design**  
    - Designed a star schema for optimized querying and Power BI reporting  
@@ -93,58 +89,29 @@ This project follows a structured end-to-end data analysis workflow:
    - Interpreted findings and suggested actionable business improvements  
    - Identified areas for potential optimization in supply chain operations  
 
----
 
 ---
-## Business Questions
+## 📌 Business Questions  
 
-Order Analysis:
+### 1️⃣ Sales & Profitability Analysis  
+- Which products or product categories contribute the most to total sales and profitability?  
+- Are there specific customer segments that generate a disproportionate share of revenue and profit?  
+- How do discount levels affect sales and profitability? Is there an optimal discount strategy?  
 
-- What are the trends in the number of orders over time, and do specific exhibit significant changes or seasonality?
-- Are there any notable differences in order patterns among difference customer segment or product categories?
-- How do order volumes correlate with sales, profit, and discount levels?
+### 2️⃣ Order Trends & Customer Behavior  
+- How have order volumes changed over time? Are there any seasonal patterns or significant fluctuations?  
+- Do order trends vary across different customer segments or product categories?  
+- What is the relationship between order volume, sales, profit, and discount levels?  
 
-Sales and Profitability:
-- Which products or product categories contribute the most to total sales and profitability
-- Are there specific customer segments that generate a disproportionate share of sales and profit?
-- How do discount levels impact sales and profitability, and is there an optimal discount strategy to maximize both?
+### 3️⃣  Shipping & Delivery Performance  
+- What are the most commonly used shipping methods, and how do they impact delivery timeliness?  
+- Is there a correlation between order processing times and delivery delays? How does this affect late delivery rates? 
 
-Geographic:
-- What geographical regions are the top performing cities in terms of total order volume and net sales?
-- How do regional factors influence supply chain logistics and delivery times?
-
-Shipping and Delivery Efficiency:
-- What are the most commonly used shipping modes, and how do they relate to delivery timeliness?
-- Is there a correlation between order processing times and delivery timeliness, and does it impact the rate of late deliveries?
-
----
-
-## 🚀 Steps in the Project  
-
-This project follows a structured end-to-end data analysis workflow:  
-
-1. **Data Cleaning & Transformation**  
-   - Imported raw data into MySQL  
-   - Cleaned missing values and handled data inconsistencies using SQL & Python  
-
-2. **Data Modeling & Schema Design**  
-   - Designed a star schema for optimized querying and Power BI reporting  
-   - Created normalized tables for better data organization  
-
-3. **Exploratory Data Analysis (EDA)**  
-   - Identified key trends and patterns in orders, delivery performance, and customer behavior  
-   - Visualized insights using Python (Matplotlib & Seaborn)  
-
-4. **Dashboard & Report Development**  
-   - Built interactive Power BI dashboards to visualize key metrics  
-   - Designed reports focusing on delivery performance and order trends  
-
-5. **Insights & Recommendations**  
-   - Interpreted findings and suggested actionable business improvements  
-   - Identified areas for potential optimization in supply chain operations  
+### 4️⃣  Geographic Performance & Regional Insights  
+- Which geographical regions or cities generate the highest order volume and net sales?  
+- How do regional factors influence supply chain logistics and delivery efficiency? 
 
 ---
-
 
 ## Insights
 
@@ -214,7 +181,7 @@ On-time processing, such as same-day or next-day shipping, significantly reduces
 
 ---
 
-## Visualisation
+## 🖥️ Visualization Preview
 
 I have created two dashboard from this dataset.
 
