@@ -12,7 +12,6 @@ clean_df = pd.read_csv(file_path, dtype={
 ## dim_location table
 # Extract the required columns for customer and order locations
 dim_location = clean_df[['order_city', 'order_state', 'order_zipcode', 'order_region', 'order_country','market']].copy()
-dim_location.columns = ['city', 'state', 'zipcode', 'region', 'country']
 
 # Drop duplicates to ensure unique locations then Generate a unique location_id
 dim_location = dim_location.drop_duplicates().reset_index(drop=True)
