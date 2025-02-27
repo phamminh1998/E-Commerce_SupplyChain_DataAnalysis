@@ -95,6 +95,8 @@ Detail can of SQL/Python Script can be seen in [2_create_star_schema_server.sql]
 
 4. **Dashboard & Report Development**  
    - Built interactive Power BI dashboards to visualize key metrics  
+   ![Executive Dashboard](<reports/figures/sales  overview.png>)
+
    - Designed reports focusing on delivery performance and order trends  
 
 5. **Insights & Recommendations**  
