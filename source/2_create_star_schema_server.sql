@@ -43,6 +43,9 @@ INSERT INTO dim_location (order_city, order_state, order_zipcode, order_region, 
 SELECT DISTINCT order_city, order_state, order_zipcode, order_region, order_country, market
 FROM interim_data;
 
+SELECT COUNT(*)
+FROM dataco.dim_location dl ;
+
 --- 2) CREATE dim_customer TABLE
 
 CREATE TABLE IF NOT EXISTS dim_customer (
@@ -55,11 +58,13 @@ CREATE TABLE IF NOT EXISTS dim_customer (
     customer_street VARCHAR(100),
     customer_city VARCHAR(100),
     customer_state VARCHAR(50),
-    customer_zipcode VARCHAR(10)
+    customer_zipcode VARCHAR(10),
+    latitude DECIMAL(18, 10), 
+    longitude DECIMAL(18, 10)
 );
 
-INSERT INTO dim_customer (	customer_id, customer_fname, customer_lname, customer_email, customer_password, customer_segment, customer_city, customer_street, customer_state, customer_zipcode)
-SELECT DISTINCT				customer_id, customer_fname, customer_lname, customer_email, customer_password, customer_segment, customer_city, customer_street, customer_state, customer_zipcode
+INSERT INTO dim_customer (	customer_id, customer_fname, customer_lname, customer_email, customer_password, customer_segment, customer_city, customer_street, customer_state, customer_zipcode, latitude, longitude)
+SELECT DISTINCT				customer_id, customer_fname, customer_lname, customer_email, customer_password, customer_segment, customer_city, customer_street, customer_state, customer_zipcode, latitude, longitude
 FROM interim_data;
 
 SELECT COUNT(*)
@@ -144,9 +149,7 @@ CREATE TABLE IF NOT EXISTS fact_order (
     late_delivery_risk INT,
     shipping_date DATETIME,
     days_for_shipping_real INT,
-    days_for_shipment_scheduled INT,
-    latitude DECIMAL(18, 10),
-    longitude DECIMAL(18, 10),     
+    days_for_shipment_scheduled INT,     
     type VARCHAR(50),
     customer_id INT,
     product_card_id INT,
@@ -173,8 +176,6 @@ INSERT INTO fact_order (
     order_profit_per_order,
     delivery_status,
     late_delivery_risk,
-    latitude,
-    longitude,
     market,
     order_region,
     order_country,
@@ -206,8 +207,6 @@ SELECT
     order_profit_per_order,
     delivery_status,
     late_delivery_risk,
-    latitude,
-    longitude,
     market,
     order_region,
     order_country,
