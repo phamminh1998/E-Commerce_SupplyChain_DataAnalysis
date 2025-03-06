@@ -15,12 +15,13 @@ DATABASE STRUCTURE
 ------------------
 
 The Database will contain 6 dimension tables and 1 fact table for order information
-1) Order
+1) fact_item: 
 2) dim_location: Normalize Order locations
 3) dim_customer: Information related to customers
 4) dim_category: Product category
 5) dim_product: Details about products
-6) dim_department: Order statuses
+6) dim_department: Department name and their id
+7) dim_order_shipping: Information related to order
 
 
 */
@@ -121,61 +122,41 @@ SELECT COUNT(*)
 FROM dim_department;
 
 
--- 6) CREATE fact_order TABLE
+-- 6) CREATE dim_order_shipping TABLE
 
--- Create fact_order table
-CREATE TABLE IF NOT EXISTS fact_order (
-    order_item_id INT PRIMARY KEY,
-    order_id INT,
+-- Create dim_order_shipping table
+CREATE TABLE IF NOT EXISTS dim_order_shipping (
+    order_id INT PRIMARY KEY,
+    order_customer_id INT,
     order_date DATETIME,
-    order_item_discount DECIMAL(18, 10),
-    order_item_discount_rate DECIMAL(18, 10),
-    order_item_profit_ratio DECIMAL(18, 10),
-    order_item_quantity INT,
-    sales DECIMAL(18, 10),
-    benefit_per_order DECIMAL(18, 10),
-    sales_per_customer DECIMAL(18, 10),
-    order_item_total DECIMAL(18, 10),
-    order_profit_per_order DECIMAL(18, 10),
     order_status VARCHAR(50),
+    type VARCHAR(50),
     market VARCHAR(50),
     order_region VARCHAR(50),
     order_country VARCHAR(100),
     order_state VARCHAR(50),
     order_city VARCHAR(100),
     order_zipcode VARCHAR(10),
+    location_id INT,
     shipping_mode VARCHAR(50),
     delivery_status VARCHAR(50),
     late_delivery_risk INT,
     shipping_date DATETIME,
     days_for_shipping_real INT,
-    days_for_shipment_scheduled INT,     
-    type VARCHAR(50),
-    customer_id INT,
-    product_card_id INT,
-    department_id INT,
-    location_id INT,
-    FOREIGN KEY (customer_id) REFERENCES dim_customer(customer_id),
-    FOREIGN KEY (product_card_id) REFERENCES dim_product(product_card_id),
-    FOREIGN KEY (department_id) REFERENCES dim_department(department_id)
+    days_for_shipment_scheduled INT,
+    FOREIGN KEY (order_customer_id) REFERENCES dim_customer(customer_id),
+    FOREIGN KEY (location_id) REFERENCES dim_location(location_id)
 );
 
 
 
-INSERT INTO fact_order (
+
+INSERT INTO dim_order_shipping (
     order_id,
-    order_item_id,
+    order_customer_id,
     order_date,
-    shipping_date,
-    sales,
-    order_item_discount,
-    order_item_discount_rate,
-    order_item_profit_ratio,
-    order_item_quantity,
-    order_item_total,
-    order_profit_per_order,
-    delivery_status,
-    late_delivery_risk,
+    order_status,
+    type,
     market,
     order_region,
     order_country,
@@ -183,30 +164,18 @@ INSERT INTO fact_order (
     order_city,
     order_zipcode,
     shipping_mode,
-    order_status,
-    customer_id,
-    product_card_id,
-    department_id,
+    delivery_status,
+    late_delivery_risk,
+    shipping_date,
     days_for_shipping_real,
-    days_for_shipment_scheduled,
-    benefit_per_order,
-    sales_per_customer,
-    type
+    days_for_shipment_scheduled
 )
-SELECT 
+SELECT DISTINCT
     order_id,
-    order_item_id,
+    customer_id,
     order_date,
-    shipping_date,
-    sales,
-    order_item_discount,
-    order_item_discount_rate,
-    order_item_profit_ratio,
-    order_item_quantity,
-    order_item_total,
-    order_profit_per_order,
-    delivery_status,
-    late_delivery_risk,
+    order_status,
+    type,
     market,
     order_region,
     order_country,
@@ -214,28 +183,26 @@ SELECT
     order_city,
     order_zipcode,
     shipping_mode,
-    order_status,
-    customer_id,
-    product_card_id,
-    department_id,
+    delivery_status,
+    late_delivery_risk,
+    shipping_date,
     days_for_shipping_real,
-    days_for_shipment_scheduled,
-    benefit_per_order,
-    sales_per_customer,
-    type
+    days_for_shipment_scheduled
 FROM interim_data;
 
-UPDATE fact_order fo
-JOIN dim_location dl
-ON fo.order_city = dl.order_city
-AND fo.order_state = dl.order_state
-AND fo.order_zipcode = dl.order_zipcode
-AND fo.order_region = dl.order_region
-AND fo.order_country = dl.order_country
-AND fo.market = dl.market
-SET fo.location_id = dl.location_id;
 
-ALTER TABLE fact_order 
+UPDATE dim_order_shipping dos
+JOIN dim_location dl
+ON dos.order_city = dl.order_city
+AND dos.order_state = dl.order_state
+AND (dos.order_zipcode = dl.order_zipcode OR dos.order_zipcode IS NULL OR dl.order_zipcode IS NULL)
+AND dos.order_region = dl.order_region
+AND dos.order_country = dl.order_country
+AND dos.market = dl.market
+SET dos.location_id = dl.location_id;
+
+
+ALTER TABLE dim_order_shipping 
 DROP COLUMN order_city,
 DROP COLUMN order_state,
 DROP COLUMN order_zipcode,
@@ -243,7 +210,64 @@ DROP COLUMN order_region,
 DROP COLUMN order_country,
 DROP COLUMN market;
 
-select * from fact_order fo limit 5;
+select * from dim_order_shipping ORDER BY order_id limit 5;
+
+-- 6) CREATE fact_item TABLE
+-- Create dim_order_shipping table
+CREATE TABLE IF NOT EXISTS fact_item (
+    order_item_id INT PRIMARY KEY,
+    order_id INT,
+    order_item_cardprod_id INT,
+    order_item_discount DECIMAL(18, 10),
+    order_item_discount_rate DECIMAL(18, 10),
+    order_item_profit_ratio DECIMAL(18, 10),
+    order_item_quantity INT,
+    order_item_total DECIMAL(18, 10),
+    sales_per_customer DECIMAL(18, 10),
+    sales DECIMAL(18, 10),
+    benefit_per_order DECIMAL(18, 10),
+    order_profit_per_order DECIMAL(18, 10),
+    department_id INT,
+    FOREIGN KEY (order_id) REFERENCES dim_order_shipping(order_id),
+    FOREIGN KEY (order_item_cardprod_id) REFERENCES dim_product(product_card_id),
+    FOREIGN KEY (department_id) REFERENCES dim_department(department_id)
+);
+
+INSERT INTO fact_item (
+    order_item_id,
+    order_id,
+    order_item_cardprod_id,
+    department_id,
+    order_item_discount,
+    order_item_discount_rate,
+    order_item_profit_ratio,
+    order_item_quantity,
+    order_item_total,
+    sales_per_customer,
+    sales,
+    benefit_per_order,
+    order_profit_per_order
+)
+SELECT 
+    order_item_id,
+    order_id,
+    order_item_cardprod_id,
+    department_id,
+    order_item_discount,
+    order_item_discount_rate,
+    order_item_profit_ratio,
+    order_item_quantity,
+    order_item_total,
+    sales_per_customer,
+    sales,
+    benefit_per_order,
+    order_profit_per_order
+FROM interim_data;
+
+
+SELECT COUNT(*) FROM fact_item;
+SELECT COUNT(*) FROM raw_data rd ;
+
 
 -- TO VERIFY IF ALL THE TABLES WERE CREATED 
 SELECT * 
