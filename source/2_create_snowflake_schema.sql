@@ -15,13 +15,14 @@ DATABASE STRUCTURE
 ------------------
 
 The Database will contain 6 dimension tables and 1 fact table for order information
-1) fact_item: 
-2) dim_location: Normalize Order locations
-3) dim_customer: Information related to customers
-4) dim_category: Product category
-5) dim_product: Details about products
-6) dim_department: Department name and their id
-7) dim_order_shipping: Information related to order
+1) dim_location: stores geographical details of orders, including city, state, region, country, and market classification.
+2) dim_customer: contains detailed customer information, including personal details, location, and segmentation for analysis.
+3) dim_category: Product category
+4) dim_product: Details about products
+5) dim_department: Department name and their id
+6) dim_order_shipping: Information related to order
+7) fact_item: 
+
 
 
 */
@@ -39,7 +40,7 @@ CREATE TABLE IF NOT EXISTS dim_location (
     UNIQUE (order_city, order_state, order_zipcode, order_region, order_country, market)  -- Ensure uniqueness
 );
 
--- 2) INSERT only distinct location records
+-- INSERT only distinct location records
 INSERT INTO dim_location (order_city, order_state, order_zipcode, order_region, order_country, market)
 SELECT DISTINCT order_city, order_state, order_zipcode, order_region, order_country, market
 FROM interim_data;
@@ -212,7 +213,7 @@ DROP COLUMN market;
 
 select * from dim_order_shipping ORDER BY order_id limit 5;
 
--- 6) CREATE fact_item TABLE
+-- 7) CREATE fact_item TABLE
 -- Create dim_order_shipping table
 CREATE TABLE IF NOT EXISTS fact_item (
     order_item_id INT PRIMARY KEY,

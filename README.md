@@ -77,29 +77,36 @@ This project follows a structured end-to-end data analysis workflow:
    - Designed a star schema with normalized dimension tables to reduce redundancy, optimize querying and modeling in Power BI/Tableau
    ![Database Diagram](<reports/figures/DataCo Supply Chain simple DB Diagram.png>)
 
-      + orders_fact: detail on each order about item quantity, sales and profit, delivery detail.
-      + dim_customer: customer information
-      + dim_product: Details about products
-      + dim_location: Normalize order location
-      + dim_date: Dates for various events (order, shipping)
-      + dim_department: Store_category
-      + dim_market: Market information
-      + dim_category: Product category
+      + `dim_location`: table provides structured location data for each order, including city, state, region, and market information. This enables businesses to analyze geographic trends, track regional performance, and optimize supply chain strategies. The table ensures uniqueness in location records, making it a reliable reference for order-based analytics.  
+
+      + `dim_customer`: table centralizes customer-related data, including names, emails, addresses, and geographic coordinates. It also classifies customers based on segments, which aids in targeted marketing and customer behavior analysis. This table serves as a key component in understanding customer demographics and improving customer relationship management.  
+
+      + `dim_category`: table acts as a reference for product classification, ensuring a well-organized product hierarchy. Each product category is assigned a unique identifier, allowing for efficient filtering and analysis of product trends, sales distribution, and category performance.  
+
+      + `dim_product` : table serves as a central repository for product-related information, linking each product to its respective category. It includes essential attributes such as product name, price, and image, facilitating inventory management, pricing analysis, and category-based sales insights. By referencing the `dim_category` table, it ensures a structured approach to organizing product data.  
+
+      + `dim_department`: table organizes products into in-charge departments, helping businesses analyze sales trends and inventory distribution at a higher level. Each department is assigned a unique identifier, allowing for better product categorization and streamlined reporting on department-level performance.  
+
+      + `dim_order_shipping`: table provides insights into order fulfillment by tracking key shipping details such as order dates, shipping modes, delivery statuses, and delays. It links customer orders with location data, helping businesses analyze logistics efficiency, late delivery risks, and regional shipping performance.  
+  
+      + `fact_item`: table serves as the central fact table in the schema, storing granular transaction-level details for each purchased item. It captures key financial metrics such as sales, discounts, profit ratios, and customer spending, while also linking to product, order, and department information. This table is crucial for analyzing revenue trends, profitability, and customer purchasing behavior.  
+
+
 Detail can of SQL/Python Script can be seen in [2_create_star_schema_server.sql](source/2_create_star_schema_server.sql) and [2_create_star_schema.py](source/2_create_star_schema.py)
 
-3. **Exploratory Data Analysis (EDA)**  
+1. **Exploratory Data Analysis (EDA)**  
    - [Answer some adhoc questions by SQL](source/3_adhoc_Data_Analysis.sql)
    ![Preview of SQL adhoc](<reports/figures/adhoc with SQL.png>)
    - Identified key trends and patterns in orders, delivery performance, and customer behavior  with Python [Jupyter Notebook](notebooks/3_experiment_data_analysis.ipynb)
    - Visualized insights using Python (Matplotlib & Seaborn)
 
-4. **Dashboard & Report Development**  
+2. **Dashboard & Report Development**  
    - Built interactive Power BI dashboards to visualize key metrics  
    ![Executive Dashboard](<reports/figures/sales  overview.png>)
 
    - Designed reports focusing on delivery performance and order trends  
 
-5. **Insights & Recommendations**  
+3. **Insights & Recommendations**  
    - Interpreted findings and suggested actionable business improvements  
    - Identified areas for potential optimization in supply chain operations  
 
