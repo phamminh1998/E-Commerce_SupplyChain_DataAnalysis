@@ -15,14 +15,19 @@ DATABASE STRUCTURE
 ------------------
 
 The Database will contain 6 dimension tables and 1 fact table for order information
-1) dim_location: stores geographical details of orders, including city, state, region, country, and market classification.
-2) dim_customer: contains detailed customer information, including personal details, location, and segmentation for analysis.
-3) dim_category: Product category
-4) dim_product: Details about products
-5) dim_department: Department name and their id
-6) dim_order_shipping: Information related to order
-7) fact_item: 
+-- 1) dim_location: Stores geographic details related to orders, including city, state, region, country, and market segmentation.  
 
+-- 2) dim_customer: Contains customer information such as name, email, location, and segmentation to support customer analytics.  
+
+-- 3) dim_category: Defines product categories, providing a structured classification for product data.  
+
+-- 4) dim_product: Stores product details, including name, category, price, and image reference for product management.  
+
+-- 5) dim_department: Represents business departments, helping to categorize products and analyze department-level performance.  
+
+-- 6) dim_order_shipping: Tracks order details, including customer, location, shipping mode, delivery status, and key order timelines.  
+
+-- 7) fact_item: Captures transactional details of each order item, including sales, discounts, profit, and quantity, linking to product and department data.  
 
 
 */
