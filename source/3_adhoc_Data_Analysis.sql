@@ -25,9 +25,9 @@ SELECT
     order_region,
     AVG(DATEDIFF(shipping_date, order_date)) AS avg_delay_days
 FROM 
-    fact_order fo
-LEFT JOIN dim_location dl
-USING(location_id)
+    fact_item fi
+LEFT JOIN dim_order_shipping dos USING(order_id)
+LEFT JOIN dim_location dl USING(location_id)
 WHERE 
     shipping_date IS NOT NULL 
     AND order_date IS NOT NULL
@@ -43,9 +43,10 @@ ORDER BY
 SELECT 
     market,
     AVG(DATEDIFF(shipping_date, order_date)) AS avg_delay_days
-FROM fact_order fo
-LEFT JOIN dim_location dl
-USING(location_id)
+FROM 
+    fact_item fi
+LEFT JOIN dim_order_shipping dos USING(order_id)
+LEFT JOIN dim_location dl USING(location_id)
 WHERE 
     shipping_date IS NOT NULL 
     AND order_date IS NOT NULL
@@ -59,8 +60,8 @@ ORDER BY
 -- Calculate the average time taken between shipment and delivery
 SELECT 
     AVG(DATEDIFF(shipping_date,order_date)) AS avg_time_between_shipment_and_delivery
-FROM 
-    fact_order
+FROM fact_item fi 
+LEFT JOIN dim_order_shipping dos USING(order_id)
 WHERE 
     shipping_date IS NOT NULL 
     AND order_date IS NOT NULL;
@@ -74,8 +75,8 @@ WHERE
 SELECT 
     DATE_FORMAT(order_date, '%Y-%m') AS month, -- Extract year and month from order_date
     COUNT(CASE WHEN late_delivery_risk = 1 THEN 1 END) / COUNT(*) * 100 AS late_delivery_rate
-FROM 
-    fact_order
+FROM fact_item fi 
+LEFT JOIN dim_order_shipping dos USING(order_id)
 WHERE 
     order_date IS NOT NULL
 GROUP BY 
@@ -89,7 +90,8 @@ ORDER BY
 SELECT 
     market,
     COUNT(CASE WHEN late_delivery_risk = 1 THEN 1 END) / COUNT(*) * 100 AS late_delivery_percentage
-FROM fact_order fo
+FROM fact_item fi 
+LEFT JOIN dim_order_shipping dos USING(order_id)
 LEFT JOIN dim_location dl
 USING(location_id)
 GROUP BY 
@@ -105,8 +107,8 @@ SELECT
     COUNT(CASE WHEN late_delivery_risk = 1 THEN 1 END) AS late_delivery_count,
     COUNT(*) AS total_deliveries,
     (COUNT(CASE WHEN late_delivery_risk = 1 THEN 1 END) / COUNT(*)) * 100 AS late_delivery_rate_percentage
-FROM 
-    fact_order
+FROM fact_item fi 
+LEFT JOIN dim_order_shipping dos USING(order_id)
 GROUP BY 
     shipping_mode
 ORDER BY 
@@ -123,8 +125,8 @@ SELECT
     COUNT(*) AS total_deliveries,
     (COUNT(CASE WHEN late_delivery_risk = 1 THEN 1 END) / COUNT(*)) * 100 AS late_delivery_percentage,
     (COUNT(CASE WHEN late_delivery_risk = 0 THEN 1 END) / COUNT(*)) * 100 AS on_time_delivery_percentage
-FROM 
-    fact_order fo
+FROM fact_item fi 
+LEFT JOIN dim_order_shipping dos USING(order_id)
 LEFT JOIN dim_location dl
 USING(location_id)
 GROUP BY 
@@ -135,18 +137,18 @@ ORDER BY
    
 -- 2.6) What are the main reasons for shipment cancellations, and how do they vary by order status?
 
-SELECT OrderStatus, DeliveryStatus, COUNT(*) AS Cancellation_Count
-FROM Ordersprocessing
-WHERE DeliveryStatus = 'Shipping canceled'
-GROUP BY OrderStatus, DeliveryStatus;
+SELECT dos.order_status , dos.delivery_status , COUNT(*) AS Cancellation_Count
+FROM dim_order_shipping dos 
+WHERE delivery_status = 'Shipping canceled'
+GROUP BY order_status, delivery_status;
 
 -- 2.7) Are certain customer segments more prone to late deliveries?
-SELECT c.CustomerSegment, COUNT(*) AS Late_Deliveries
-FROM OrdersProcessing op
-JOIN Orders o ON op.OrderId = o.OrderId
-JOIN Customer c ON o.OrderCustomerId = c.CustomerId
-WHERE op.DeliveryStatus = 'Late delivery'
-GROUP BY c.CustomerSegment;
+SELECT dc.customer_segment , COUNT(*) AS Late_Deliveries
+FROM dim_order_shipping dos
+LEFT JOIN dim_customer dc ON dos.order_customer_id = dc.customer_id
+WHERE dos.delivery_status = 'Late delivery'
+GROUP BY dc.customer_segment
+ORDER BY COUNT(*) DESC;
 
 
 
@@ -154,134 +156,135 @@ GROUP BY c.CustomerSegment;
 
 -- KPI QUESTION
 -- Q1: What is the overall average inventory turnover rate across all customer segment?
-SELECT c.CustomerSegment, 
-       AVG(oi.OrderItemQuantity) AS Avg_Inventory_Level
-FROM Customer c
-JOIN Orders o ON c.CustomerId = o.OrderCustomerId
-JOIN Order_Item oi ON o.OrderId = oi.OrderId
-GROUP BY c.CustomerSegment;
+SELECT dc.customer_segment, 
+       AVG(fi.order_item_quantity ) AS Avg_Inventory_Level
+FROM fact_item fi
+LEFT JOIN dim_order_shipping dos USING(order_id)
+LEFT JOIN dim_customer dc ON dc.customer_id = dos.order_customer_id
+GROUP BY dc.customer_segment;
 
 -- Q2: How does the on-time delivery rate vary across different product categories?
-SELECT c.CategoryName, 
-       (COUNT(CASE WHEN op.DeliveryStatus = 'Shipping on time' THEN op.OrderId END) * 100.0 / COUNT(op.OrderId)) AS On_Time_Delivery_Rate
-FROM OrdersProcessing op
-JOIN Orders o ON op.OrderId = o.OrderId
-JOIN Order_Item oi ON o.OrderId = oi.OrderId
-JOIN Product p ON oi.ProductCardId = p.ProductCardId
-JOIN Category c ON p.CategoryId = c.CategoryId
-GROUP BY c.CategoryName;
+SELECT dc.category_name , 
+       (COUNT(CASE WHEN dos.delivery_status = 'Shipping on time' THEN dos.order_id END) * 100.0 / COUNT(dos.order_id)) AS On_Time_Delivery_Rate
+FROM dim_order_shipping dos
+JOIN fact_item fi USING(order_id)
+JOIN dim_product dp ON fi.order_item_cardprod_id = dp.product_card_id
+JOIN dim_category dc ON dp.product_category_id = dc.category_id
+GROUP BY dc.category_name
+ORDER BY On_Time_Delivery_Rate DESC;
 
 
 -- 3.1) What is the current inventory level of each product category
-SELECT c.CategoryName, 
+SELECT dc.category_name, 
 	COUNT(*) AS Inventory_Level
-FROM Category c
-JOIN Product p ON c.CategoryId = p.CategoryId
-JOIN Order_Item oi ON p.ProductCardId = oi.ProductCardId
-JOIN Orders o ON oi.OrderId = o.OrderId
-WHERE oi.OrderId IN (SELECT OrderId FROM Orders WHERE OrderStatus = 'COMPLETE')
-GROUP BY c.CategoryName;
+FROM dim_category dc
+JOIN dim_product dp ON dc.category_id = dp.product_category_id
+JOIN fact_item fi ON dp.product_card_id = fi.order_item_cardprod_id
+JOIN dim_order_shipping dos USING(order_id)
+WHERE order_id IN (SELECT order_id FROM dim_order_shipping WHERE order_status = 'COMPLETE')
+GROUP BY dc.category_name;
 
 
 -- 3.2) What is the average number of days it takes to sell out the entire inventory for each product category?
-SELECT c.CategoryName, 
+SELECT dc.category_name, 
        AVG(DATEDIFF(max_order_date, min_order_date)) AS Avg_Days_To_Sell_Out
-FROM Category c
-JOIN Product p ON c.CategoryId = p.CategoryId
-JOIN Order_Item oi ON p.ProductCardId = oi.ProductCardId
+FROM dim_category dc
+JOIN dim_product dp ON dc.category_id = dp.product_category_id
+JOIN fact_item fi ON dp.product_card_id = fi.order_item_cardprod_id
 JOIN (
-    SELECT ProductCardId,
-           MIN(o.OrderDate) AS min_order_date,
-           MAX(o.OrderDate) AS max_order_date
-    FROM Orders o
-    JOIN Order_Item oi ON o.OrderId = oi.OrderId
-    GROUP BY ProductCardId
-) AS order_dates ON p.ProductCardId = order_dates.ProductCardId
-GROUP BY c.CategoryName;
+    SELECT fi.order_item_cardprod_id ,
+           MIN(dos.order_date) AS min_order_date,
+           MAX(dos.order_date) AS max_order_date
+    FROM dim_order_shipping dos
+    JOIN fact_item fi USING(order_id)
+    GROUP BY fi.order_item_cardprod_id 
+) AS order_dates ON dp.product_card_id = order_dates.order_item_cardprod_id
+GROUP BY dc.category_name;
 
 
 -- 3.3) What is the average inventory turnover rate for each product category?
-SELECT c.CategoryName,
-       COUNT(DISTINCT o.OrderId) / COUNT(DISTINCT p.ProductCardId) AS Avg_Inventory_Turnover_Rate
-FROM Category c
-JOIN Product p ON c.CategoryId = p.CategoryId
-JOIN Order_Item oi ON p.ProductCardId = oi.ProductCardId
-JOIN Orders o ON oi.OrderId = o.OrderId
-GROUP BY c.CategoryName;
+SELECT dc.category_name,
+       COUNT(DISTINCT order_id) / COUNT(DISTINCT dp.product_card_id) AS Avg_Inventory_Turnover_Rate
+FROM dim_category dc
+JOIN dim_product dp ON dc.category_id = dp.product_category_id
+JOIN fact_item fi ON dp.product_card_id = fi.order_item_cardprod_id
+JOIN dim_order_shipping dos USING(order_id)
+GROUP BY dc.category_name;
 
 
 -- 3.4) What is the average inventory turnover rate for the entire inventory?
 SELECT 
-    SUM(oi.OrderItemQuantity) AS Total_Quantity,
-    COUNT(DISTINCT oi.OrderId) AS Total_Orders,
-    SUM(oi.OrderItemQuantity) / COUNT(DISTINCT oi.OrderId) AS Avg_Inventory_Turnover_Rate
-FROM Order_Item oi;
+    SUM(fi.order_item_quantity ) AS Total_Quantity,
+    COUNT(DISTINCT order_id) AS Total_Orders,
+    SUM(fi.order_item_quantity ) / COUNT(DISTINCT order_id) AS Avg_Inventory_Turnover_Rate
+FROM fact_item fi;
 
 
 -- 3.5) Which products have the highest sales volume relative to inventory levels, categorized by product category?
-SELECT c.CategoryName, 
-       p.ProductName,
-       SUM(oi.OrderItemQuantity) AS Total_Sales,
-       AVG(oi.OrderItemQuantity) AS Avg_Inventory_Level
-FROM Product p
-JOIN Order_Item oi ON p.ProductCardId = oi.ProductCardId
-JOIN Category c ON p.CategoryId = c.CategoryId
-GROUP BY c.CategoryName, p.ProductName
-ORDER BY (SUM(oi.OrderItemQuantity) / AVG(oi.OrderItemQuantity)) DESC;
+SELECT dc.category_name, 
+       dp.product_name,
+       SUM(fi.order_item_quantity) AS Total_Sales,
+       AVG(fi.order_item_quantity) AS Avg_Inventory_Level
+FROM dim_product dp
+JOIN fact_item fi ON dp.product_card_id = fi.order_item_cardprod_id
+JOIN dim_category dc ON dp.product_category_id = dc.category_id
+GROUP BY dc.category_name, dp.product_name
+ORDER BY (SUM(fi.order_item_quantity) / AVG(fi.order_item_quantity)) DESC;
 
 
 -- 3.6) Which products have been in stock for the longest duration without being sold?
 -- Note: Inventory Age = Difference in Days between the maximum order date (when the product was sold) and the minimum order date (when the product was added to inventory).
 WITH Inventory_Age AS (
-    SELECT p.CategoryId, 
-           p.ProductName,
-           DATEDIFF(MAX(o.OrderDate), MIN(o.OrderDate)) AS Inventory_Age
-    FROM Product p
-    JOIN Order_Item oi ON p.ProductCardId = oi.ProductCardId
-    JOIN Orders o ON oi.OrderId = o.OrderId
-    GROUP BY p.CategoryId, p.ProductName
+    SELECT dp.product_category_id, 
+           dp.product_name,
+           DATEDIFF(MAX(dos.order_date), MIN(dos.order_date)) AS Inventory_Age
+    FROM dim_product dp
+    JOIN fact_item fi ON dp.product_card_id = fi.order_item_cardprod_id
+    JOIN dim_order_shipping dos USING(order_id)
+    GROUP BY dp.product_category_id, dp.product_name
 )
-SELECT c.CategoryName, 
-       ia.ProductName,
+SELECT dc.category_name, 
+       ia.product_name,
        ia.Inventory_Age
 FROM Inventory_Age ia
-JOIN Category c ON ia.CategoryId = c.CategoryId
+JOIN dim_category dc ON ia.product_category_id = dc.category_id
 ORDER BY ia.Inventory_Age DESC;
 
 
--- 4.4) How many times does the inventory turn over in a year for each product category?
-SELECT c.CategoryName, 
-       COUNT(DISTINCT oi.OrderId) / COUNT(DISTINCT p.ProductCardId) AS Inventory_Turnover_Rate
-FROM Product p
-LEFT JOIN Order_Item oi ON p.ProductCardId = oi.ProductCardId
-LEFT JOIN Category c ON p.CategoryId = c.CategoryId
-LEFT JOIN Orders o ON oi.OrderId = o.OrderId
-WHERE o.OrderStatus = 'COMPLETE'
-GROUP BY c.CategoryName;
+-- 4) How many times does the inventory turn over in a year for each product category?
+SELECT dc.category_name, 
+       COUNT(DISTINCT order_id) / COUNT(DISTINCT dp.product_card_id) AS Inventory_Turnover_Rate
+FROM dim_product dp
+LEFT JOIN fact_item fi ON dp.product_card_id = fi.order_item_cardprod_id
+LEFT JOIN dim_category dc ON dp.product_category_id = dc.category_id
+LEFT JOIN dim_order_shipping dos USING(order_id)
+WHERE dos.order_status = 'COMPLETE'
+GROUP BY dc.category_name;
 
 
 -- 5) CUSTOMER ANALYSIS
 
 -- 5.1) What are the top 10 customers based on the total sales amount?
 SELECT
-    c.CustomerId,
-    CONCAT(c.FirstName, ' ', c.LastName) AS CustomerName,
-    SUM(oi.Sales) AS TotalSales
+    dc.customer_id,
+    CONCAT(customer_fname, ' ', customer_lname) AS CustomerName,
+    SUM(fi.sales) AS TotalSales
 FROM
-    Customer c
-    INNER JOIN Orders o ON c.CustomerId = o.OrderCustomerId
-    INNER JOIN Order_Item oi ON o.OrderId = oi.OrderId
+    dim_customer dc
+    INNER JOIN dim_order_shipping dos ON dc.customer_id = dos.order_customer_id
+    INNER JOIN fact_item fi USING(order_id)
 GROUP BY
-    c.CustomerId, CustomerName
+    dc.customer_id, CustomerName
 ORDER BY
     TotalSales DESC
 LIMIT 10;
 
 -- 5.2) Which customer segments generate the highest profit for the company?
-SELECT c.CustomerSegment, SUM(o.OrderProfitPerOrder) AS Total_Profit
-FROM Customer c
-INNER JOIN Orders o ON c.CustomerId = o.OrderCustomerId
-GROUP BY c.CustomerSegment
+SELECT dc.customer_segment, ROUND(SUM(fi.order_profit_per_order),2) AS Total_Profit
+FROM dim_customer dc
+INNER JOIN dim_order_shipping dos ON dc.customer_id = dos.order_customer_id
+LEFT JOIN fact_item fi USING(order_id)
+GROUP BY dc.customer_segment
 ORDER BY Total_Profit DESC;
 
 
@@ -291,45 +294,45 @@ ORDER BY Total_Profit DESC;
 -- 6.1) What are the top 5 most profitable products?
 
 SELECT
-    p.ProductCardId,
-    p.ProductName,
-    SUM(oi.OrderItemProfitRatio * oi.OrderItemProductPrice) AS TotalProfit
+    dp.product_card_id,
+    dp.product_name,
+    SUM(fi.order_item_profit_ratio * dp.product_price) AS TotalProfit
 FROM
-    Product p
-    INNER JOIN Order_Item oi ON p.ProductCardId = oi.ProductCardId
+    dim_product dp
+    INNER JOIN fact_item fi ON dp.product_card_id = fi.order_item_cardprod_id
 GROUP BY
-    p.ProductCardId, p.ProductName
+    dp.product_card_id, dp.product_name
 ORDER BY
     TotalProfit DESC
 LIMIT 5;
 
 -- 6.2) What are the top-selling products by quantity and revenue?  
-SELECT p.ProductName, 
-	SUM(oi.OrderItemQuantity) AS Total_Quantity, 
-	SUM(oi.Sales) AS Total_Revenue
-FROM Order_Item oi
-JOIN Product p ON oi.ProductCardId = p.ProductCardId
-GROUP BY p.ProductName
+SELECT dp.product_name, 
+	SUM(fi.order_item_quantity) AS Total_Quantity, 
+	SUM(fi.sales) AS Total_Revenue
+FROM fact_item fi
+JOIN dim_product dp ON fi.order_item_cardprod_id = dp.product_card_id
+GROUP BY dp.product_name
 ORDER BY Total_Quantity DESC, Total_Revenue DESC;
 
 -- 6.3) What is the average profit ratio for each product category?
 SELECT
-    c.CategoryName,
-    AVG(oi.OrderItemProfitRatio) AS AvgProfitRatio
+    dc.category_name,
+    AVG(fi.order_item_profit_ratio) AS AvgProfitRatio
 FROM
-    Category c
-    INNER JOIN Product p ON c.CategoryId = p.CategoryId
-    INNER JOIN Order_Item oi ON p.ProductCardId = oi.ProductCardId
+    dim_category dc
+    INNER JOIN dim_product dp ON dc.category_id = dp.product_category_id
+    INNER JOIN fact_item fi ON dp.product_card_id = fi.order_item_cardprod_id
 GROUP BY
-    c.CategoryName;
+    dc.category_name;
     
 -- 6.3) What are the top-selling products based on total sales amount?
 SELECT 
-    p.ProductName,
-    SUM(oi.OrderItemTotal) AS Total_Sales
-FROM Order_Item oi
-JOIN Product p ON oi.ProductCardId = p.ProductCardId
-GROUP BY p.ProductName
+    dp.product_name,
+    SUM(fi.order_item_total) AS Total_Sales
+FROM fact_item fi
+JOIN dim_product dp ON fi.order_item_cardprod_id = dp.product_card_id
+GROUP BY dp.product_name
 ORDER BY Total_Sales DESC;
 
 
@@ -337,51 +340,53 @@ ORDER BY Total_Sales DESC;
     
 -- 7.1) What are the total sales for each country?
 SELECT
-    o.OrderCountry,
-    SUM(oi.Sales) AS TotalSales
+    dl.order_country,
+    SUM(fi.sales) AS TotalSales
 FROM
-    Orders o
-    INNER JOIN Order_Item oi ON o.OrderId = oi.OrderId
+    dim_order_shipping dos
+    INNER JOIN fact_item fi USING(order_id)
+    LEFT JOIN dim_location dl USING(location_id)
 GROUP BY
-    o.OrderCountry
+    dl.order_country
 ORDER BY
     TotalSales DESC;
 
 -- 7.2) What are the top regions in terms of sales revenue?
-SELECT o.OrderRegion, SUM(oi.Sales) AS Total_Revenue
-FROM Orders o
-JOIN Order_Item oi ON o.OrderId = oi.OrderId
-GROUP BY o.OrderRegion
+SELECT dl.order_region, SUM(fi.sales) AS Total_Revenue
+FROM dim_order_shipping dos
+JOIN fact_item fi USING(order_id)
+LEFT JOIN dim_location dl USING(location_id)
+GROUP BY dl.order_region
 ORDER BY Total_Revenue DESC;
  
  
 -- 8) SHIPPING MODE ANALYSIS
 
 -- 8.1) What is the average profit per order for each shipping mode?
-SELECT op.ShippingMode, 
-       AVG(o.OrderProfitPerOrder) AS Avg_Profit_Per_Order
-FROM OrdersProcessing op
-JOIN Orders o ON op.OrderId = o.OrderId
-GROUP BY op.ShippingMode;
+SELECT dos.shipping_mode, 
+       AVG(fi.order_profit_per_order) AS Avg_Profit_Per_Order
+FROM dim_order_shipping dos
+JOIN fact_item fi USING(order_id)
+GROUP BY dos.shipping_mode;
 
 
 -- 8.2) How many orders were shipped late for each shipping mode?
     
 SELECT
-    op.ShippingMode,
+    dos.shipping_mode,
     COUNT(*) AS LateOrders
 FROM
-    OrdersProcessing op
+    dim_order_shipping dos
 WHERE
-    op.LateDeliveryRisk = 1
+    dos.late_delivery_risk = 1
 GROUP BY
-    op.ShippingMode;
+    dos.shipping_mode;
 
 -- 8.3) Which shipping mode is associated with the highest profit per order?
-SELECT op.ShippingMode, AVG(o.OrderProfitPerOrder) AS Avg_Profit_Per_Order
-FROM OrdersProcessing op
-JOIN Orders o ON op.OrderId = o.OrderId
-GROUP BY op.ShippingMode
+SELECT dos.shipping_mode, AVG(fi.order_profit_per_order) AS Avg_Profit_Per_Order
+FROM dim_order_shipping dos
+JOIN fact_item fi USING(order_id)
+GROUP BY dos.shipping_mode
 ORDER BY Avg_Profit_Per_Order DESC;
    
    
@@ -390,21 +395,21 @@ ORDER BY Avg_Profit_Per_Order DESC;
 
 -- KPI
 -- Q1: What is the distribution of order statuses for all orders?
-SELECT OrderStatus, 
-       (COUNT(*) * 100.0 / (SELECT COUNT(*) FROM Orders)) AS Percentage_Order_Status
-FROM OrdersProcessing
-GROUP BY OrderStatus;
+SELECT dos.order_status, 
+       (COUNT(*) * 100.0 / (SELECT COUNT(*) FROM dim_order_shipping)) AS Percentage_Order_Status
+FROM dim_order_shipping dos 
+GROUP BY dos.order_status;
 
 -- 9.1) What is the percentage distribution of different order statuses?
 SELECT 
-    op.OrderStatus,
+    dos.order_status,
     COUNT(*) AS Orders_Count,
-    (COUNT(*) * 100.0) / (SELECT COUNT(*) FROM OrdersProcessing) AS Status_Percentage
-FROM OrdersProcessing op
-GROUP BY op.OrderStatus;
+    (COUNT(*) * 100.0) / (SELECT COUNT(*) FROM dim_order_shipping) AS Status_Percentage
+FROM dim_order_shipping dos
+GROUP BY dos.order_status;
 
 -- 9.2) What is the average processing time for each shipping mode?
-SELECT ShippingMode, 
-       AVG(RealShippingDays) AS Avg_Processing_Time
-FROM Ordersprocessing
-GROUP BY ShippingMode;
+SELECT shipping_mode, 
+       AVG(dos.days_for_shipping_real) AS Avg_Processing_Time
+FROM dim_order_shipping dos
+GROUP BY dos.shipping_mode;
